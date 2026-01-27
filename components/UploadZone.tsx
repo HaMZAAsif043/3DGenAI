@@ -2,8 +2,9 @@
 
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, X, FileImage, AlertCircle } from 'lucide-react';
+import { Upload, X, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Image from 'next/image';
 
 interface UploadZoneProps {
     onFilesSelected: (files: File[]) => void;
@@ -71,10 +72,11 @@ export default function UploadZone({ onFilesSelected, maxFiles = 5 }: UploadZone
                                 layout
                                 className="group relative aspect-square rounded-xl overflow-hidden border border-zinc-200"
                             >
-                                <img
+                                <Image
                                     src={URL.createObjectURL(file)}
                                     alt="Preview"
-                                    className="w-full h-full object-cover"
+                                    fill
+                                    className="object-cover"
                                 />
                                 <button
                                     onClick={() => removeFile(idx)}

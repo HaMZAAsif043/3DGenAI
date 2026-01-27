@@ -54,7 +54,8 @@ export async function queryJobStatus(jobId: string): Promise<HunyuanJobResponse>
             ErrorMsg: result.ErrorMsg
         };
     } catch (err) {
-        console.error("Hunyuan3D status query error:", err);
-        throw err;
+        const error = err as Error;
+        console.error("Hunyuan3D status query error:", error);
+        throw error;
     }
 }

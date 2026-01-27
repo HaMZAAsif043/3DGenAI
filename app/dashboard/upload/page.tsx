@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Box, Sparkles, Loader2, CheckCircle2, AlertCircle, Download, Smartphone, QrCode, X as CloseX } from 'lucide-react';
+import { Box, Sparkles, Loader2, CheckCircle2, AlertCircle, Download, Smartphone, QrCode, X as CloseX, Layers } from 'lucide-react';
 import UploadZone from '@/components/UploadZone';
 import ModelViewer from '@/components/ModelViewer';
+import ModelSkeleton from '@/components/ModelSkeleton';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
 
@@ -16,6 +17,7 @@ export default function UploadPage() {
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [progress, setProgress] = useState(0);
     const [showQR, setShowQR] = useState(false);
+    const [uploadedFilesCount, setUploadedFilesCount] = useState(0);
 
     // Poll status when processing
     useEffect(() => {
@@ -47,6 +49,7 @@ export default function UploadPage() {
     const handleStartGeneration = async (files: File[]) => {
         if (files.length === 0) return;
 
+        setUploadedFilesCount(files.length);
         setStatus('uploading');
         setErrorMessage(null);
         setProgress(20);
@@ -76,9 +79,10 @@ export default function UploadPage() {
                     throw new Error(data.error || 'Failed to start job');
                 }
             };
-        } catch (err: any) {
+        } catch (err) {
+            const error = err as Error;
             setStatus('failed');
-            setErrorMessage(err.message);
+            setErrorMessage(error.message);
         }
     };
 
@@ -124,6 +128,13 @@ export default function UploadPage() {
                                 handleStartGeneration(files);
                             }
                         }} />
+
+                        {uploadedFilesCount > 1 && (
+                            <div className="mt-4 flex items-center gap-2 p-3 bg-blue-50 text-blue-700 rounded-xl border border-blue-100 text-sm font-medium animate-in fade-in slide-in-from-top-4">
+                                <Layers className="w-4 h-4" />
+                                Multi-view Mode: Merging {uploadedFilesCount} images for higher fidelity
+                            </div>
+                        )}
 
                         <div className="mt-8 pt-6 border-t border-zinc-100">
                             <h4 className="text-sm font-bold uppercase tracking-wider text-zinc-400 mb-4">Generation Settings</h4>
@@ -187,7 +198,11 @@ export default function UploadPage() {
                 {/* Right Column: Viewer */}
                 <div className="space-y-6">
                     <div className="h-[600px] sticky top-8">
-                        <ModelViewer modelUrl={modelUrl} />
+                        {status === 'processing' || status === 'uploading' ? (
+                            <ModelSkeleton />
+                        ) : (
+                            <ModelViewer modelUrl={modelUrl} />
+                        )}
 
                         {status === 'completed' && (
                             <motion.div
@@ -244,7 +259,11 @@ export default function UploadPage() {
                                     <Smartphone className="w-8 h-8 text-accent" />
                                 </div>
                                 <h3 className="text-xl font-bold">View in AR</h3>
-                                <p className="text-zinc-500 text-sm mt-1">Scan to view the model on your mobile device</p>
+                                <p className="text-zinc-500 text-sm mt-1">Scan to preview the 3D model in your physical space</p>
+                                <div className="flex justify-center gap-4 mt-2">
+                                    <span className="text-[10px] bg-zinc-100 px-2 py-0.5 rounded text-zinc-500 font-bold uppercase tracking-widest">iOS: USDZ</span>
+                                    <span className="text-[10px] bg-zinc-100 px-2 py-0.5 rounded text-zinc-500 font-bold uppercase tracking-widest">Android: GLB</span>
+                                </div>
                             </div>
 
                             <div className="bg-zinc-50 p-6 rounded-2xl border border-zinc-100 mb-6 flex justify-center">
