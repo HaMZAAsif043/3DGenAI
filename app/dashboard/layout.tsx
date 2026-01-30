@@ -1,11 +1,23 @@
+'use client';
+
 import Link from 'next/link';
-import { Box, LayoutDashboard, UploadCloud, History, Settings } from 'lucide-react';
+import { Box, LayoutDashboard, UploadCloud, History, Settings, LogOut, User } from 'lucide-react';
+// import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
 
 export default function DashboardLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
+    // const { user, logout, loading } = useAuth();
+    const router = useRouter();
+
+    const handleLogout = async () => {
+        // await logout();
+        router.push('/login');
+    };
+
     return (
         <div className="flex min-h-screen bg-zinc-50">
             {/* Sidebar */}
@@ -23,8 +35,25 @@ export default function DashboardLayout({
                     <NavItem href="#" icon={<History className="w-5 h-5" />} label="History" />
                 </nav>
 
-                <div className="p-4 border-t border-zinc-100">
+                <div className="p-4 border-t border-zinc-100 space-y-2">
+                    {/* {user && ( */}
+                    <div className="px-4 py-3 bg-zinc-50 rounded-xl flex items-center gap-3 mb-2">
+                        <div className="w-8 h-8 bg-zinc-200 rounded-lg flex items-center justify-center">
+                            <User className="w-4 h-4 text-zinc-500" />
+                        </div>
+                        <div className="overflow-hidden">
+                            {/* <p className="text-xs font-bold truncate">{user.email}</p> */}
+                        </div>
+                    </div>
+                    {/* )} */}
                     <NavItem href="#" icon={<Settings className="w-5 h-5" />} label="Settings" />
+                    <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 transition-colors font-medium"
+                    >
+                        <LogOut className="w-5 h-5" />
+                        Log Out
+                    </button>
                 </div>
             </aside>
 

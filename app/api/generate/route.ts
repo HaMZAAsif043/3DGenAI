@@ -13,12 +13,27 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'No images provided' }, { status: 400 });
         }
 
-        // Process the first image for single mode (simplification for MVP)
-        const primaryImage = images[0];
+        let input: string | any[];
 
-        // In production, you'd upload the local image to a cloud bucket (COS/S3) 
-        // and pass the URL to Hunyuan3D.
-        const jobId = await submitImageTo3D(primaryImage, mode === 'pro');
+        if (images.length === 1) {
+            // Single view: pass base64 directly
+            input = images[0];
+        } else {
+            // Multi-view: format according to Hunyuan3D requirements
+            // Defaulting views: [front (implied), back, left, right, top, bottom]
+            const viewOrder: any[] = ['back', 'left', 'right', 'top', 'bottom'];
+            input = images.slice(1).map((img: string, index: number) => ({
+                ViewType: viewOrder[index] || 'back',
+                ViewImageBase64: img.split(',')[1] || img
+            }));
+
+            // Note: The first image is usually the main/front image in Pro API 
+            // but for MultiViewImages parameter, it expects specific views.
+            // If the user provides 2 images, it's Front + Back.
+        }
+
+        const isPro = mode === 'pro';
+        const jobId = await submitImageTo3D(input, isPro);
 
         return NextResponse.json({
             jobId,

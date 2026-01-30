@@ -1,12 +1,16 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Box, Sparkles, Loader2, CheckCircle2, AlertCircle, Download, Smartphone, QrCode, X as CloseX, Layers } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Box, Sparkles, Loader2, CheckCircle2, AlertCircle, Download, Smartphone, QrCode, X as CloseX, Layers, ArrowUpRight } from 'lucide-react';
 import UploadZone from '@/components/UploadZone';
 import ModelViewer from '@/components/ModelViewer';
 import ModelSkeleton from '@/components/ModelSkeleton';
 import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
 import { QRCodeSVG } from 'qrcode.react';
+import { Options as DemoOptions } from '@/lib/demo-data';
+import * as THREE from 'three';
+import { exportToGLB, exportToUSDZ, uploadToCloudinary, triggerDownload } from '@/lib/exporters';
 
 type JobStatus = 'idle' | 'uploading' | 'processing' | 'completed' | 'failed';
 
@@ -18,6 +22,26 @@ export default function UploadPage() {
     const [progress, setProgress] = useState(0);
     const [showQR, setShowQR] = useState(false);
     const [uploadedFilesCount, setUploadedFilesCount] = useState(0);
+    const [isExporting, setIsExporting] = useState<'glb' | 'usdz' | null>(null);
+    const [generationMode, setGenerationMode] = useState<'pro' | 'rapid'>('pro');
+    const [cloudinaryUrl, setCloudinaryUrl] = useState<string | null>(null);
+    const modelGroupRef = useRef<THREE.Group>(null);
+
+    // Persistence: Restore Job ID on mount
+    useEffect(() => {
+        let savedJob = localStorage.getItem('last_hunyuan_job_id');
+
+        // Manual seed for the specific job requested by user
+        if (!savedJob) {
+            savedJob = "1408773166930632704";
+            localStorage.setItem('last_hunyuan_job_id', savedJob);
+        }
+
+        if (savedJob && !jobId) {
+            setJobId(savedJob);
+            setStatus('processing'); // Resume polling
+        }
+    }, []);
 
     // Poll status when processing
     useEffect(() => {
@@ -25,13 +49,12 @@ export default function UploadPage() {
         if (status === 'processing' && jobId) {
             interval = setInterval(async () => {
                 try {
-                    const res = await fetch(`/api/status/${jobId}`);
+                    const res = await fetch(`/api/status/${jobId}?mode=${generationMode}`);
                     const data = await res.json();
 
                     if (data.Status === 'SUCCESS') {
                         setStatus('completed');
                         setModelUrl(data.ResultUrl);
-                        setJobId(null);
                         clearInterval(interval);
                     } else if (data.Status === 'FAILED') {
                         setStatus('failed');
@@ -46,6 +69,54 @@ export default function UploadPage() {
         return () => clearInterval(interval);
     }, [status, jobId]);
 
+    const compressImage = (file: File): Promise<File> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target?.result as string;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    const maxDim = 1200; // Optimal for Tencent API
+
+                    if (width > height) {
+                        if (width > maxDim) {
+                            height *= maxDim / width;
+                            width = maxDim;
+                        }
+                    } else {
+                        if (height > maxDim) {
+                            width *= maxDim / height;
+                            height = maxDim;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx?.drawImage(img, 0, 0, width, height);
+
+                    canvas.toBlob(
+                        (blob) => {
+                            if (blob) {
+                                resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+                            } else {
+                                reject(new Error('Compression failed'));
+                            }
+                        },
+                        'image/jpeg',
+                        0.85
+                    );
+                };
+                img.onerror = reject;
+            };
+            reader.onerror = reject;
+        });
+    };
+
     const handleStartGeneration = async (files: File[]) => {
         if (files.length === 0) return;
 
@@ -55,30 +126,36 @@ export default function UploadPage() {
         setProgress(20);
 
         try {
-            // In a real app, you'd upload the files to a storage service first.
-            // For this demo, we'll convert to base64 or a temporary URL.
-            const reader = new FileReader();
-            reader.readAsDataURL(files[0]);
-            reader.onload = async () => {
-                const base64 = reader.result;
+            // Compress and process all selected files to base64
+            const processedImages = await Promise.all(
+                files.map(async file => {
+                    const compressed = await compressImage(file);
+                    return new Promise<string>((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = () => resolve(reader.result as string);
+                        reader.onerror = reject;
+                        reader.readAsDataURL(compressed);
+                    });
+                })
+            );
 
-                setProgress(40);
-                setStatus('processing');
+            setProgress(40);
+            setStatus('processing');
 
-                const res = await fetch('/api/generate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ images: [base64], mode: 'pro' }),
-                });
+            const res = await fetch('/api/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ images: processedImages, mode: generationMode }),
+            });
 
-                const data = await res.json();
-                if (data.jobId) {
-                    setJobId(data.jobId);
-                    setProgress(60);
-                } else {
-                    throw new Error(data.error || 'Failed to start job');
-                }
-            };
+            const data = await res.json();
+            if (data.jobId) {
+                setJobId(data.jobId);
+                localStorage.setItem('last_hunyuan_job_id', data.jobId);
+                setProgress(60);
+            } else {
+                throw new Error(data.error || 'Failed to start job');
+            }
         } catch (err) {
             const error = err as Error;
             setStatus('failed');
@@ -86,20 +163,66 @@ export default function UploadPage() {
         }
     };
 
-    const downloadModel = async () => {
-        if (!modelUrl) return;
+    const handleStartDemo = (modelId: string, url: string) => {
+        setStatus('uploading');
+        setErrorMessage(null);
+        setProgress(30);
+
+        setTimeout(() => {
+            setStatus('processing');
+            setProgress(60);
+
+            setTimeout(() => {
+                setStatus('completed');
+                setModelUrl(url);
+                setJobId(`demo-${modelId}`);
+                setProgress(100);
+            }, 2000);
+        }, 1500);
+    };
+
+    const downloadModel = async (format: 'glb' | 'usdz') => {
+        if (!modelGroupRef.current) {
+            console.error('No model group found for export');
+            return;
+        }
+
         try {
-            const response = await fetch(modelUrl);
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `model-${Date.now()}.glb`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            setIsExporting(format);
+            if (format === 'glb') {
+                const blob = await exportToGLB(modelGroupRef.current);
+                triggerDownload(blob, `model-${Date.now()}.glb`);
+            } else {
+                const blob = await exportToUSDZ(modelGroupRef.current);
+                triggerDownload(blob, `model-${Date.now()}.usdz`);
+            }
         } catch (err) {
-            console.error('Download failed:', err);
+            console.error(`${format.toUpperCase()} Export failed:`, err);
+        } finally {
+            setIsExporting(null);
+        }
+    };
+
+    const handleShareAR = async () => {
+        if (!modelGroupRef.current) return;
+
+        try {
+            setIsExporting('usdz');
+
+            // 1. Export scene to USDZ blob
+            const usdzBlob = await exportToUSDZ(modelGroupRef.current);
+
+            // 2. Upload to Cloudinary to get a permanent URL for the QR code
+            const fileName = `model-${jobId || Date.now()}.usdz`;
+            const url = await uploadToCloudinary(usdzBlob, fileName);
+
+            setCloudinaryUrl(url);
+            setShowQR(true);
+        } catch (err) {
+            console.error('AR Export/Upload failed:', err);
+            setErrorMessage('Failed to prepare AR sharing');
+        } finally {
+            setIsExporting(null);
         }
     };
 
@@ -124,7 +247,7 @@ export default function UploadPage() {
                 <div className="space-y-6">
                     <div className="bg-white p-8 rounded-3xl border border-zinc-200 shadow-sm">
                         <UploadZone onFilesSelected={(files) => {
-                            if (status === 'idle' || status === 'completed') {
+                            if (status === 'idle' || status === 'completed' || status === 'failed') {
                                 handleStartGeneration(files);
                             }
                         }} />
@@ -137,20 +260,49 @@ export default function UploadPage() {
                         )}
 
                         <div className="mt-8 pt-6 border-t border-zinc-100">
-                            <h4 className="text-sm font-bold uppercase tracking-wider text-zinc-400 mb-4">Generation Settings</h4>
-                            <div className="flex items-center justify-between p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
-                                <div className="flex items-center gap-3">
+                            <h4 className="text-sm font-bold uppercase tracking-wider text-zinc-400 mb-4">Generation Mode</h4>
+                            <button
+                                onClick={() => setGenerationMode(generationMode === 'pro' ? 'rapid' : 'pro')}
+                                className="w-full flex items-center justify-between p-4 bg-zinc-50 rounded-2xl border border-zinc-100 hover:border-accent/20 transition-all group"
+                            >
+                                <div className="flex items-center gap-3 text-left">
                                     <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center">
-                                        <Sparkles className="w-5 h-5 text-accent" />
+                                        <Sparkles className={`w-5 h-5 ${generationMode === 'pro' ? 'text-accent' : 'text-zinc-400'}`} />
                                     </div>
                                     <div>
-                                        <p className="font-semibold">Hunyuan3D V2 Pro</p>
-                                        <p className="text-xs text-zinc-500">Highest quality, slower generation</p>
+                                        <p className="font-semibold">{generationMode === 'pro' ? 'Hunyuan3D Pro' : 'Hunyuan3D Rapid'}</p>
+                                        <p className="text-xs text-zinc-500">
+                                            {generationMode === 'pro' ? 'Highest fidelity (2-3 mins)' : 'Faster results (30-60 secs)'}
+                                        </p>
                                     </div>
                                 </div>
-                                <div className="w-12 h-6 bg-accent rounded-full relative">
-                                    <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm" />
+                                <div className={`w-12 h-6 rounded-full relative transition-colors ${generationMode === 'pro' ? 'bg-accent' : 'bg-zinc-200'}`}>
+                                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-all ${generationMode === 'pro' ? 'right-1' : 'left-1'}`} />
                                 </div>
+                            </button>
+                        </div>
+
+                        {/* Demo Models Selection */}
+                        <div className="mt-8 pt-6 border-t border-zinc-100">
+                            <h4 className="text-sm font-bold uppercase tracking-wider text-zinc-400 mb-4">Try Demo Models</h4>
+                            <div className="grid grid-cols-4 gap-3">
+                                {DemoOptions.slice(0, 8).map((option) => (
+                                    <button
+                                        key={option.currentModel.id}
+                                        onClick={() => handleStartDemo(option.currentModel.id, (option as any).glbModel || option.image)}
+                                        className="group relative aspect-square rounded-2xl overflow-hidden border border-zinc-100 hover:border-accent/50 transition-colors bg-zinc-50"
+                                    >
+
+                                        <img
+                                            src={option.image}
+                                            alt={option.label}
+                                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                        />
+                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                            <p className="text-[10px] text-white font-bold uppercase tracking-widest">{option.label}</p>
+                                        </div>
+                                    </button>
+                                ))}
                             </div>
                         </div>
                     </div>
@@ -190,45 +342,65 @@ export default function UploadPage() {
                                         </p>
                                     </div>
                                 </div>
+
+                                {status === 'completed' && (
+                                    <motion.div
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: 'auto' }}
+                                        className="mt-6 pt-6 border-t border-white/10 grid grid-cols-2 gap-3"
+                                    >
+                                        <button
+                                            onClick={() => downloadModel('glb')}
+                                            disabled={!!isExporting}
+                                            className="flex items-center justify-center gap-2 py-3 bg-white text-black rounded-xl text-sm font-bold hover:scale-105 transition-transform disabled:opacity-50"
+                                        >
+                                            {isExporting === 'glb' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                                            {isExporting === 'glb' ? 'Exporting...' : 'Download GLB'}
+                                        </button>
+                                        <button
+                                            onClick={() => downloadModel('usdz')}
+                                            disabled={!!isExporting}
+                                            className="flex items-center justify-center gap-2 py-3 bg-zinc-800 text-white border border-zinc-700 rounded-xl text-sm font-bold hover:bg-zinc-700 transition-colors disabled:opacity-50"
+                                        >
+                                            {isExporting === 'usdz' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Smartphone className="w-4 h-4" />}
+                                            {isExporting === 'usdz' ? 'Exporting...' : 'Download USDZ'}
+                                        </button>
+                                        <button
+                                            onClick={handleShareAR}
+                                            disabled={!!isExporting}
+                                            className="col-span-2 flex items-center justify-center gap-2 py-3 bg-accent text-white rounded-xl text-sm font-bold hover:brightness-110 transition-all disabled:opacity-50"
+                                        >
+                                            {isExporting === 'usdz' ? <Loader2 className="w-4 h-4 animate-spin" /> : <QrCode className="w-4 h-4" />}
+                                            {isExporting === 'usdz' ? 'Preparing AR...' : 'Share AR'}
+                                        </button>
+                                        <Link
+                                            href={`/dashboard/viewer/${jobId}?mode=${generationMode}`}
+                                            className="col-span-2 flex items-center justify-center gap-2 py-3 bg-zinc-100 text-zinc-900 border border-zinc-200 rounded-xl text-sm font-bold hover:bg-zinc-200 transition-all"
+                                        >
+                                            <ArrowUpRight className="w-4 h-4" />
+                                            Open Detailed Viewer
+                                        </Link>
+                                    </motion.div>
+                                )}
                             </motion.div>
                         )}
                     </AnimatePresence>
+
                 </div>
 
                 {/* Right Column: Viewer */}
                 <div className="space-y-6">
-                    <div className="h-[600px] sticky top-8">
+                    <div className="h-[500px] sticky top-8">
+
                         {status === 'processing' || status === 'uploading' ? (
                             <ModelSkeleton />
                         ) : (
-                            <ModelViewer modelUrl={modelUrl} />
-                        )}
-
-                        {status === 'completed' && (
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                className="mt-6 grid grid-cols-2 gap-4"
-                            >
-                                <button
-                                    onClick={downloadModel}
-                                    className="flex items-center justify-center gap-2 py-4 bg-black text-white rounded-2xl font-bold hover:scale-105 transition-transform shadow-lg"
-                                >
-                                    <Download className="w-5 h-5" />
-                                    Download GLB
-                                </button>
-                                <button
-                                    onClick={() => setShowQR(true)}
-                                    className="flex items-center justify-center gap-2 py-4 bg-white text-black border border-zinc-200 rounded-2xl font-bold hover:bg-zinc-50 transition-colors"
-                                >
-                                    <QrCode className="w-5 h-5" />
-                                    Share AR
-                                </button>
-                            </motion.div>
+                            <ModelViewer modelUrl={modelUrl} groupRef={modelGroupRef} />
                         )}
                     </div>
                 </div>
             </div>
+
 
             {/* QR Code Modal */}
             <AnimatePresence>
@@ -267,8 +439,9 @@ export default function UploadPage() {
                             </div>
 
                             <div className="bg-zinc-50 p-6 rounded-2xl border border-zinc-100 mb-6 flex justify-center">
-                                <QRCodeSVG value={modelUrl || window.location.href} size={200} />
+                                <QRCodeSVG value={cloudinaryUrl || `${window.location.origin}/ar/${jobId}`} size={200} />
                             </div>
+
 
                             <p className="text-xs text-zinc-400">
                                 Works on most modern iOS (USDZ) and Android (Scene Viewer) devices.

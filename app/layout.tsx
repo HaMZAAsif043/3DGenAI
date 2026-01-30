@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+// import { AuthProvider } from "@/context/AuthContext";
 
 export const metadata: Metadata = {
   title: "AI 3D Gen | Image to 3D Platform",
@@ -14,7 +15,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="antialiased">
       <body className="min-h-screen bg-white text-black">
+        {/* <AuthProvider> */}
         {children}
+        {/* </AuthProvider> */}
       </body>
     </html>
   );

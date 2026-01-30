@@ -52,9 +52,49 @@ export default function UploadZone({ onFilesSelected, maxFiles = 5 }: UploadZone
                     Drag & drop JPG or PNG files here. Support for single or multi-view snapshots.
                 </p>
 
-                <div className="mt-8 flex items-center gap-2 text-sm text-zinc-400 border border-zinc-100 px-4 py-2 rounded-full">
-                    <AlertCircle className="w-4 h-4" />
-                    Max {maxFiles} images recommended for best results
+                <div className="mt-8 flex flex-col gap-4 w-full">
+                    <div className="flex items-center justify-between p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center">
+                                <AlertCircle className="w-5 h-5 text-accent" />
+                            </div>
+                            <div>
+                                <p className="text-sm font-bold uppercase tracking-wider text-zinc-400">Total Credits</p>
+                                <p className="font-semibold text-zinc-900">200 Free Credits</p>
+                            </div>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-sm font-bold text-accent">-25 / gen</p>
+                            <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">8 Uses Total</p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="p-4 bg-zinc-50 rounded-2xl border border-zinc-100 space-y-2">
+                            <h4 className="text-xs font-bold uppercase tracking-widest text-zinc-400 mb-2">Image Guidelines</h4>
+                            <ul className="text-xs text-zinc-600 space-y-1">
+                                <li className="flex items-center gap-2">
+                                    <div className="w-1 h-1 bg-accent rounded-full" />
+                                    Formats: JPG, PNG, WEBP
+                                </li>
+                                <li className="flex items-center gap-2">
+                                    <div className="w-1 h-1 bg-accent rounded-full" />
+                                    Resolution: 128px to 5000px
+                                </li>
+                                <li className="flex items-center gap-2">
+                                    <div className="w-1 h-1 bg-accent rounded-full" />
+                                    Size: Max 6MB (Base64)
+                                </li>
+                            </ul>
+                        </div>
+                        <div className="p-4 bg-zinc-50 rounded-2xl border border-zinc-100 space-y-2">
+                            <h4 className="text-xs font-bold uppercase tracking-widest text-zinc-400 mb-2">Pro Tips</h4>
+                            <p className="text-[10px] leading-relaxed text-zinc-500">
+                                For best results, use a plain background and ensure the object is centered.
+                                Multi-view (up to 5 images) creates significantly more detailed models.
+                            </p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
