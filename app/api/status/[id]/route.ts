@@ -16,19 +16,12 @@ export async function GET(
             const demoId = jobId.replace('demo-', '');
             // Simple mapping for demo models
             const demoModels: Record<string, string> = {
-                'jacket-1': 'https://raw.githubusercontent.com/google/model-viewer/master/packages/shared-assets/models/Astronaut.glb',
-                'bag-1': 'https://raw.githubusercontent.com/google/model-viewer/master/packages/shared-assets/models/Astronaut.glb',
-                'car-1': 'https://raw.githubusercontent.com/google/model-viewer/master/packages/shared-assets/models/Astronaut.glb',
-                'sofa-3': 'https://raw.githubusercontent.com/google/model-viewer/master/packages/shared-assets/models/NeilArmstrong.glb',
-                'sofa-2': 'https://raw.githubusercontent.com/google/model-viewer/master/packages/shared-assets/models/NeilArmstrong.glb',
-                'sofa-1': 'https://raw.githubusercontent.com/google/model-viewer/master/packages/shared-assets/models/NeilArmstrong.glb',
-                'shoe-1': 'https://raw.githubusercontent.com/google/model-viewer/master/packages/shared-assets/models/Astronaut.glb',
-                'fridge-1': 'https://raw.githubusercontent.com/google/model-viewer/master/packages/shared-assets/models/Astronaut.glb'
+                'jacket-1': 'https://iteijaqdlduvfybamemk.supabase.co/storage/v1/object/public/3D%20assets/jacket.glb'
             };
 
             return NextResponse.json({
                 Status: 'SUCCESS',
-                ResultUrl: demoModels[demoId] || demoModels['sofa-3'],
+                ResultUrl: demoModels[demoId] || demoModels['jacket-1'],
                 Progress: 100
             });
         }

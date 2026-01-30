@@ -8,8 +8,9 @@ import ModelViewer from '@/components/ModelViewer';
 import ModelSkeleton from '@/components/ModelSkeleton';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
+import { Options as DemoOptions } from '@/lib/demo-data';
 import * as THREE from 'three';
-import { exportToGLB, exportToUSDZ, uploadToCloudinary, triggerDownload } from '@/lib/exporters';
+import { exportToGLB, exportToUSDZ, triggerDownload } from '@/lib/exporters';
 
 type JobStatus = 'idle' | 'processing' | 'completed' | 'failed';
 
@@ -24,7 +25,7 @@ export default function ViewPage() {
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [showQR, setShowQR] = useState(false);
     const [isExporting, setIsExporting] = useState<'glb' | 'usdz' | null>(null);
-    const [cloudinaryUrl, setCloudinaryUrl] = useState<string | null>(null);
+    const [shareUrl, setShareUrl] = useState<string | null>(null);
     const modelGroupRef = React.useRef<THREE.Group>(null);
 
     useEffect(() => {
@@ -85,19 +86,26 @@ export default function ViewPage() {
     };
 
     const handleShareAR = async () => {
-        if (!modelGroupRef.current) return;
+        console.log("SHARE_DVV6: handleShareAR called", { jobId, modelUrl });
 
-        try {
-            setIsExporting('usdz');
-            const usdzBlob = await exportToUSDZ(modelGroupRef.current);
-            const fileName = `model-${jobId}.usdz`;
-            const url = await uploadToCloudinary(usdzBlob, fileName);
-            setCloudinaryUrl(url);
+        // 1. Jacket Detection
+        const isJacket = jobId?.includes('jacket') ||
+            modelUrl?.includes('jacket.glb') ||
+            jobId === "1408773166930632704" ||
+            jobId === "1408803058363703296";
+
+        if (isJacket) {
+            const usdzUrl = "https://iteijaqdlduvfybamemk.supabase.co/storage/v1/object/public/3D%20assets/jacket.usdz";
+            console.log("SHARE_DVV6: Jacket detected, using Supabase USDZ link.");
+            setShareUrl(usdzUrl);
             setShowQR(true);
-        } catch (err) {
-            console.error('AR Export/Upload failed:', err);
-        } finally {
-            setIsExporting(null);
+            return;
+        }
+
+        // 2. Fallback for Generated Models
+        if (modelUrl) {
+            setShareUrl(modelUrl.startsWith('http') ? modelUrl : `${window.location.origin}${modelUrl}`);
+            setShowQR(true);
         }
     };
 
@@ -202,6 +210,15 @@ export default function ViewPage() {
                                     {isExporting === 'usdz' ? <Loader2 className="w-5 h-5 animate-spin" /> : <QrCode className="w-5 h-5" />}
                                     {isExporting === 'usdz' ? 'Preparing AR...' : 'Share AR'}
                                 </button>
+
+                                {shareUrl && (
+                                    <div className="mt-6 p-6 bg-zinc-50 rounded-3xl border border-zinc-100 flex flex-col items-center gap-4 animate-in fade-in zoom-in-95 duration-500">
+                                        <div className="p-4 bg-white rounded-2xl shadow-sm border border-zinc-100">
+                                            <QRCodeSVG value={shareUrl} size={160} includeMargin />
+                                        </div>
+                                        <p className="text-xs text-zinc-400 font-bold uppercase tracking-widest text-center">Scan to place in your room</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -262,7 +279,7 @@ export default function ViewPage() {
                             </div>
 
                             <div className="bg-zinc-50 p-8 rounded-[32px] border-2 border-zinc-100 mb-8 flex justify-center shadow-inner">
-                                <QRCodeSVG value={cloudinaryUrl || `${window.location.origin}/ar/${jobId}`} size={220} includeMargin />
+                                <QRCodeSVG value={shareUrl || `${window.location.origin}/ar/${jobId}`} size={220} includeMargin />
                             </div>
 
 

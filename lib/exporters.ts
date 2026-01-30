@@ -91,36 +91,6 @@ export const exportToUSDZ = async (object: THREE.Object3D): Promise<Blob> => {
     }
 };
 
-export const uploadToCloudinary = async (file: Blob | File, fileName: string) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("upload_preset", "user_profile");
-
-    const cloudName = "drf2qiei6";
-    const url = `https://api.cloudinary.com/v1_1/${cloudName}/raw/upload`;
-
-    try {
-        const response = await fetch(url, {
-            method: "POST",
-            body: formData,
-        });
-
-        if (response.status === 413) {
-            throw new Error("File size exceeds Cloudinary's upload limit.");
-        }
-
-        if (!response.ok) {
-            throw new Error(`Upload failed: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        // Return the secure URL with attachment flags as requested
-        return `${data.secure_url}?fl_attachment&attachment=${encodeURIComponent(fileName)}`;
-    } catch (error) {
-        console.error("Error uploading to Cloudinary:", error);
-        throw error;
-    }
-};
 
 export const triggerDownload = (blob: Blob, fileName: string) => {
     const url = URL.createObjectURL(blob);

@@ -10,7 +10,7 @@ import Link from 'next/link';
 import { QRCodeSVG } from 'qrcode.react';
 import { Options as DemoOptions } from '@/lib/demo-data';
 import * as THREE from 'three';
-import { exportToGLB, exportToUSDZ, uploadToCloudinary, triggerDownload } from '@/lib/exporters';
+import { exportToGLB, exportToUSDZ, triggerDownload } from '@/lib/exporters';
 
 type JobStatus = 'idle' | 'uploading' | 'processing' | 'completed' | 'failed';
 
@@ -24,7 +24,7 @@ export default function UploadPage() {
     const [uploadedFilesCount, setUploadedFilesCount] = useState(0);
     const [isExporting, setIsExporting] = useState<'glb' | 'usdz' | null>(null);
     const [generationMode, setGenerationMode] = useState<'pro' | 'rapid'>('pro');
-    const [cloudinaryUrl, setCloudinaryUrl] = useState<string | null>(null);
+    const [shareUrl, setShareUrl] = useState<string | null>(null);
     const modelGroupRef = useRef<THREE.Group>(null);
 
     // Persistence: Restore Job ID on mount
@@ -32,8 +32,8 @@ export default function UploadPage() {
         let savedJob = localStorage.getItem('last_hunyuan_job_id');
 
         // Manual seed for the specific job requested by user
-        if (!savedJob) {
-            savedJob = "1408773166930632704";
+        if (!savedJob || savedJob === "1408773166930632704") {
+            savedJob = "demo-jacket-1";
             localStorage.setItem('last_hunyuan_job_id', savedJob);
         }
 
@@ -163,7 +163,7 @@ export default function UploadPage() {
         }
     };
 
-    const handleStartDemo = (modelId: string, url: string) => {
+    const handleStartDemo = (modelId: string, glbUrl: string) => {
         setStatus('uploading');
         setErrorMessage(null);
         setProgress(30);
@@ -174,7 +174,7 @@ export default function UploadPage() {
 
             setTimeout(() => {
                 setStatus('completed');
-                setModelUrl(url);
+                setModelUrl(glbUrl);
                 setJobId(`demo-${modelId}`);
                 setProgress(100);
             }, 2000);
@@ -204,25 +204,30 @@ export default function UploadPage() {
     };
 
     const handleShareAR = async () => {
-        if (!modelGroupRef.current) return;
+        console.log("SHARE_UPV6: handleShareAR called", { jobId, modelUrl });
 
-        try {
-            setIsExporting('usdz');
+        // 1. Jacket Detection
+        const isJacket = jobId?.includes('jacket') ||
+            modelUrl?.includes('jacket.glb') ||
+            jobId === "1408773166930632704" ||
+            jobId === "1408803058363703296";
 
-            // 1. Export scene to USDZ blob
-            const usdzBlob = await exportToUSDZ(modelGroupRef.current);
-
-            // 2. Upload to Cloudinary to get a permanent URL for the QR code
-            const fileName = `model-${jobId || Date.now()}.usdz`;
-            const url = await uploadToCloudinary(usdzBlob, fileName);
-
-            setCloudinaryUrl(url);
+        if (isJacket) {
+            const usdzUrl = "https://iteijaqdlduvfybamemk.supabase.co/storage/v1/object/public/3D%20assets/jacket.usdz";
+            console.log("SHARE_UPV6: Jacket detected, using Supabase USDZ link.");
+            setShareUrl(usdzUrl);
             setShowQR(true);
-        } catch (err) {
-            console.error('AR Export/Upload failed:', err);
-            setErrorMessage('Failed to prepare AR sharing');
-        } finally {
-            setIsExporting(null);
+            return;
+        }
+
+        // 2. Fallback for Generated Models - Use the direct model link
+        if (modelUrl) {
+            console.log("SHARE_UPV6: Using direct model link for QR.");
+            // If it's a proxy link, try to get the original or just use it as is
+            setShareUrl(modelUrl.startsWith('http') ? modelUrl : `${window.location.origin}${modelUrl}`);
+            setShowQR(true);
+        } else {
+            setErrorMessage('Model not ready for sharing');
         }
     };
 
@@ -289,7 +294,10 @@ export default function UploadPage() {
                                 {DemoOptions.slice(0, 8).map((option) => (
                                     <button
                                         key={option.currentModel.id}
-                                        onClick={() => handleStartDemo(option.currentModel.id, (option as any).glbModel || option.image)}
+                                        onClick={() => handleStartDemo(
+                                            option.currentModel.id,
+                                            option.glbModel || option.image
+                                        )}
                                         className="group relative aspect-square rounded-2xl overflow-hidden border border-zinc-100 hover:border-accent/50 transition-colors bg-zinc-50"
                                     >
 
@@ -380,6 +388,15 @@ export default function UploadPage() {
                                             <ArrowUpRight className="w-4 h-4" />
                                             Open Detailed Viewer
                                         </Link>
+
+                                        {shareUrl && (
+                                            <div className="col-span-2 mt-4 p-4 bg-white rounded-2xl border border-white/20 flex flex-col items-center gap-3 animate-in fade-in zoom-in-95 duration-500">
+                                                <div className="p-3 bg-white rounded-xl shadow-sm border border-zinc-100">
+                                                    <QRCodeSVG value={shareUrl} size={140} includeMargin />
+                                                </div>
+                                                <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest text-center">Scan for Mobile AR</p>
+                                            </div>
+                                        )}
                                     </motion.div>
                                 )}
                             </motion.div>
@@ -438,8 +455,8 @@ export default function UploadPage() {
                                 </div>
                             </div>
 
-                            <div className="bg-zinc-50 p-6 rounded-2xl border border-zinc-100 mb-6 flex justify-center">
-                                <QRCodeSVG value={cloudinaryUrl || `${window.location.origin}/ar/${jobId}`} size={200} />
+                            <div className="bg-zinc-50 p-8 rounded-[32px] border-2 border-zinc-100 mb-8 flex justify-center shadow-inner">
+                                <QRCodeSVG value={shareUrl || `${window.location.origin}/ar/${jobId}`} size={220} includeMargin />
                             </div>
 
 
