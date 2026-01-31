@@ -35,6 +35,21 @@ export async function POST(req: Request) {
         const isPro = mode === 'pro';
         const jobId = await submitImageTo3D(input, isPro);
 
+        // TRIGGER ASYNC WEBHOOK PROCESS
+        // We call our internal webhook route in the background (no await)
+        // to start the polling and notification flow.
+        const origin = req.headers.get('origin') || 'http://localhost:3000';
+        fetch(`${origin}/api/webhook`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                jobId,
+                mode,
+                // In a real app, you'd pass a real callbackUrl here
+                callbackUrl: `${origin}/api/webhook-callback`
+            }),
+        }).catch(err => console.error('Failed to trigger background webhook:', err));
+
         return NextResponse.json({
             jobId,
             status: 'processing',

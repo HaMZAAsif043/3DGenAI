@@ -52,50 +52,72 @@ export default function UploadZone({ onFilesSelected, maxFiles = 5 }: UploadZone
                     Drag & drop JPG or PNG files here. Support for single or multi-view snapshots.
                 </p>
 
-                <div className="mt-8 flex flex-col gap-4 w-full">
-                    <div className="flex items-center justify-between p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center">
-                                <AlertCircle className="w-5 h-5 text-accent" />
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className="mt-8 flex flex-col gap-6 w-full"
+                >
+                    {/* Premium Credit Card */}
+                    <div className="relative group overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-r from-accent/20 to-blue-500/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                        <div className="relative flex items-center justify-between p-6 bg-zinc-950 rounded-[2rem] border border-white/5 shadow-2xl overflow-hidden">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-accent/10 blur-[50px] rounded-full -mr-16 -mt-16" />
+
+                            <div className="flex items-center gap-5 relative z-10">
+                                <div className="w-14 h-14 bg-white/5 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/10 shadow-inner">
+                                    <AlertCircle className="w-7 h-7 text-accent" />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-1">Compute Balance</p>
+                                    <p className="text-xl font-bold text-white tracking-tight">200 Free Credits</p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="text-sm font-bold uppercase tracking-wider text-zinc-400">Total Credits</p>
-                                <p className="font-semibold text-zinc-900">200 Free Credits</p>
+
+                            <div className="text-right relative z-10">
+                                <div className="flex items-center justify-end gap-2 mb-1">
+                                    <span className="w-1.5 h-1.5 bg-accent rounded-full animate-pulse" />
+                                    <p className="text-xs font-black text-accent uppercase tracking-widest">-25 / generation</p>
+                                </div>
+                                <p className="text-[10px] text-zinc-500 font-black uppercase tracking-[0.3em] bg-white/5 py-1 px-3 rounded-full border border-white/5">
+                                    8 Cycles Remaining
+                                </p>
                             </div>
-                        </div>
-                        <div className="text-right">
-                            <p className="text-sm font-bold text-accent">-25 / gen</p>
-                            <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">8 Uses Total</p>
                         </div>
                     </div>
 
+                    {/* Guidelines Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="p-4 bg-zinc-50 rounded-2xl border border-zinc-100 space-y-2">
-                            <h4 className="text-xs font-bold uppercase tracking-widest text-zinc-400 mb-2">Image Guidelines</h4>
-                            <ul className="text-xs text-zinc-600 space-y-1">
-                                <li className="flex items-center gap-2">
-                                    <div className="w-1 h-1 bg-accent rounded-full" />
-                                    Formats: JPG, PNG, WEBP
-                                </li>
-                                <li className="flex items-center gap-2">
-                                    <div className="w-1 h-1 bg-accent rounded-full" />
-                                    Resolution: 128px to 5000px
-                                </li>
-                                <li className="flex items-center gap-2">
-                                    <div className="w-1 h-1 bg-accent rounded-full" />
-                                    Size: Max 6MB (Base64)
-                                </li>
+                        <div className="p-6 bg-white rounded-[2rem] border border-zinc-100 shadow-sm hover:shadow-md transition-shadow group">
+                            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-4 flex items-center gap-2">
+                                <div className="w-1 h-3 bg-accent rounded-full" />
+                                Image Protocols
+                            </h4>
+                            <ul className="space-y-3">
+                                {[
+                                    { label: 'Format Compatibility', value: 'JPG, PNG, WEBP' },
+                                    { label: 'Pixel Density', value: '128px - 5000px' },
+                                    { label: 'Payload Limit', value: '6MB (Base64)' }
+                                ].map((item, i) => (
+                                    <li key={i} className="flex items-center justify-between">
+                                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">{item.label}</span>
+                                        <span className="text-[10px] font-black text-zinc-950 uppercase tracking-widest">{item.value}</span>
+                                    </li>
+                                ))}
                             </ul>
                         </div>
-                        <div className="p-4 bg-zinc-50 rounded-2xl border border-zinc-100 space-y-2">
-                            <h4 className="text-xs font-bold uppercase tracking-widest text-zinc-400 mb-2">Pro Tips</h4>
-                            <p className="text-[10px] leading-relaxed text-zinc-500">
-                                For best results, use a plain background and ensure the object is centered.
-                                Multi-view (up to 5 images) creates significantly more detailed models.
+
+                        <div className="p-6 bg-zinc-50/50 rounded-[2rem] border border-dashed border-zinc-200 group hover:border-accent/30 transition-colors">
+                            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-3 flex items-center gap-2">
+                                {/* <Sparkles className="w-3 h-3 text-accent" /> */}
+                                Optimization Tips
+                            </h4>
+                            <p className="text-[11px] leading-relaxed text-zinc-600 font-medium">
+                                Leverage <span className="text-zinc-950 font-bold">Multi-view (up to 5 images)</span> for high-fidelity sculpting. Neutral lighting and plain backgrounds yield superior vertex precision.
                             </p>
                         </div>
                     </div>
-                </div>
+                </motion.div>
             </div>
 
             <AnimatePresence>
@@ -120,7 +142,7 @@ export default function UploadZone({ onFilesSelected, maxFiles = 5 }: UploadZone
                                 />
                                 <button
                                     onClick={() => removeFile(idx)}
-                                    className="absolute top-2 right-2 p-1 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                    className="absolute top-2 right-2 p-1 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity btn-hover-effect cursor-pointer"
                                 >
                                     <X className="w-4 h-4" />
                                 </button>
