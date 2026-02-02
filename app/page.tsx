@@ -27,17 +27,17 @@ export default function LandingPage() {
         <div className="absolute top-1/4 left-0 w-[600px] h-[600px] bg-accent/5 rounded-full blur-[140px] animate-pulse" />
         <div className="absolute bottom-1/4 right-0 w-[500px] h-[500px] bg-purple-500/5 rounded-full blur-[120px] animate-pulse delay-700" />
 
-        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-12 w-full relative z-10">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 my-10 lg:px-12 w-full relative z-10">
           <div className="grid lg:grid-cols-2 gap-20 items-center">
             <motion.div
               initial={{ opacity: 0, x: -30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8 }}
             >
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-50 border border-zinc-100 rounded-full mb-8 shadow-sm">
+              {/* <div className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-50 border border-zinc-100 rounded-full mb-8 shadow-sm">
                 <Sparkles className="w-4 h-4 text-accent" />
                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Next-Gen 3D Engine v2.0</span>
-              </div>
+              </div> */}
 
               <h1 className="text-6xl md:text-8xl font-black tracking-tighter leading-[0.9] mb-10 text-zinc-950">
                 SCULPTING <br />
@@ -93,7 +93,7 @@ export default function LandingPage() {
                 <div className="relative z-10 w-full h-full bg-white rounded-[4rem] border border-zinc-100 shadow-2xl shadow-zinc-200/50 overflow-hidden group">
                   <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-zinc-50 to-transparent" />
                   <img
-                    src="/jacket_demo.png"
+                    src="/jacket.png"
                     alt="Gen3DAI Model Showcase"
                     className="w-full h-full object-contain p-20 transform group-hover:scale-105 transition-transform duration-1000"
                   />

@@ -22,8 +22,8 @@ export default function DashboardLayout({
     const navItems = [
         { href: '/dashboard', icon: LayoutDashboard, label: 'Overview' },
         { href: '/dashboard/upload', icon: UploadCloud, label: 'New Generation' },
-        { href: '#', icon: History, label: 'History' },
-        { href: '#', icon: Settings, label: 'Settings' },
+        { href: '/dashboard/history', icon: History, label: 'History' },
+        { href: '/dashboard/settings', icon: Settings, label: 'Settings' },
     ];
 
     return (
@@ -46,7 +46,7 @@ export default function DashboardLayout({
                         const isActive = pathname === item.href;
                         return (
                             <Link
-                                key={item.href}
+                                key={item.label}
                                 href={item.href}
                                 className={`flex items-center gap-4 px-6 py-4 rounded-2xl transition-all group ${isActive
                                     ? 'bg-zinc-800 text-white shadow-lg'
@@ -78,16 +78,5 @@ export default function DashboardLayout({
                 </div>
             </main>
         </div>
-    );
-}
-function NavItem({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
-    return (
-        <Link
-            href={href}
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-zinc-500 hover:text-zinc-950 hover:bg-white hover:shadow-sm hover:border-zinc-100 border border-transparent transition-all font-bold text-sm group"
-        >
-            <span className="group-hover:text-accent transition-colors">{icon}</span>
-            {label}
-        </Link>
     );
 }

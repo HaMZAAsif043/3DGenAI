@@ -260,7 +260,7 @@ export default function UploadPage() {
                 </div>
             </div>
 
-            <div className="max-w-[1600px] mx-auto grid lg:grid-cols-2 gap-10 2xl:gap-20 items-start">
+            <div className="max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 2xl:gap-20 items-start">
                 {/* Left Column: Input */}
                 <motion.div
                     initial={{ opacity: 0, x: -20 }}
@@ -269,28 +269,7 @@ export default function UploadPage() {
                 >
                     <div className="bg-white p-8 md:p-10 rounded-[2.5rem] shadow-2xl shadow-zinc-200/50 relative overflow-hidden group border border-zinc-100">
                         <div className="relative z-10">
-                            <UploadZone onFilesSelected={(files) => {
-                                if (status === 'idle' || status === 'completed' || status === 'failed') {
-                                    setPendingFiles(Array.from(files));
-                                    setStatus('idle');
-                                    setErrorMessage(null);
-                                }
-                            }} />
-
-                            {uploadedFilesCount > 1 && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className="mt-6 flex items-center gap-3 p-4 bg-blue-50/80 backdrop-blur-md text-blue-700 rounded-2xl border border-blue-100 text-sm font-bold"
-                                >
-                                    <div className="w-8 h-8 bg-blue-600 text-white rounded-lg flex items-center justify-center shadow-lg">
-                                        <Layers className="w-4 h-4" />
-                                    </div>
-                                    Multi-view Synergy: Optimized {uploadedFilesCount} views
-                                </motion.div>
-                            )}
-
-                            <div className="mt-10 pt-8 border-t border-zinc-50">
+                            <div className="mb-10">
                                 <h4 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400 mb-6 px-1">Engine Configuration</h4>
                                 <button
                                     onClick={() => setGenerationMode(generationMode === 'pro' ? 'rapid' : 'pro')}
@@ -315,6 +294,27 @@ export default function UploadPage() {
                                     </div>
                                 </button>
                             </div>
+
+                            <UploadZone onFilesSelected={(files) => {
+                                if (status === 'idle' || status === 'completed' || status === 'failed') {
+                                    setPendingFiles(Array.from(files));
+                                    setStatus('idle');
+                                    setErrorMessage(null);
+                                }
+                            }} />
+
+                            {uploadedFilesCount > 1 && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="mt-6 flex items-center gap-3 p-4 bg-blue-50/80 backdrop-blur-md text-blue-700 rounded-2xl border border-blue-100 text-sm font-bold"
+                                >
+                                    <div className="w-8 h-8 bg-blue-600 text-white rounded-lg flex items-center justify-center shadow-lg">
+                                        <Layers className="w-4 h-4" />
+                                    </div>
+                                    Multi-view Synergy: Optimized {uploadedFilesCount} views
+                                </motion.div>
+                            )}
 
                             {/* Demo Models Selection */}
                             <div className="mt-10 pt-8 border-t border-zinc-50">

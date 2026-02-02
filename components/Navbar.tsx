@@ -5,12 +5,12 @@ import { Sparkles } from 'lucide-react';
 
 export default function Navbar() {
     return (
-        <nav className="fixed top-0 w-full z-[100] bg-zinc-950/90 backdrop-blur-xl border-b border-zinc-800 h-20">
+        <nav className="fixed top-0 w-full z-[100] bg-zinc-950/90  border-b border-zinc-800 h-20">
             <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-12 h-full">
                 <div className="flex justify-between h-full items-center">
                     <div className="flex items-center gap-3">
                         <Link href="/" className="btn-hover-effect">
-                            <img src="/Gen3DAI_logo_2.png" alt="Gen3DAI Logo" className="h-16 w-auto" />
+                            <img src="/Gen3DAI_logo_2.png" alt="Gen3DAI Logo" className="h-28 w-auto" />
                         </Link>
                         <span className="text-xl font-bold tracking-tight sr-only">Gen3DAI</span>
                     </div>
