@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Box, Sparkles, Loader2, CheckCircle2, AlertCircle, Download, Smartphone, QrCode, X as CloseX, Layers, ArrowUpRight } from 'lucide-react';
+import { Box, Sparkles, Loader2, CheckCircle2, AlertCircle, Download, Smartphone, QrCode, X as CloseX, Layers, ArrowUpRight, RefreshCcw, Plus } from 'lucide-react';
 import UploadZone from '@/components/UploadZone';
 import ModelViewer from '@/components/ModelViewer';
 import ModelSkeleton from '@/components/ModelSkeleton';
@@ -11,6 +11,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { Options as DemoOptions } from '@/lib/demo-data';
 import * as THREE from 'three';
 import { exportToGLB, exportToUSDZ, triggerDownload } from '@/lib/exporters';
+import MultiViewModal from '@/components/MultiViewModal';
 
 type JobStatus = 'idle' | 'uploading' | 'processing' | 'completed' | 'failed';
 
@@ -48,10 +49,18 @@ export default function UploadPage() {
     useEffect(() => {
         let interval: NodeJS.Timeout;
         if (status === 'processing' && jobId) {
+            console.log(`POLL_START: Monitoring job ${jobId} in ${generationMode} mode`);
+
             interval = setInterval(async () => {
                 try {
-                    const res = await fetch(`/api/status/${jobId}?mode=${generationMode}`);
+                    // Cache busting to ensure fresh status from Tencent Cloud
+                    const res = await fetch(`/api/status/${jobId}?mode=${generationMode}&t=${Date.now()}`, {
+                        cache: 'no-store',
+                        headers: { 'Pragma': 'no-cache', 'Cache-Control': 'no-cache' }
+                    });
+
                     const data = await res.json();
+                    console.log(`POLL_RESULT for ${jobId}:`, data.Status);
 
                     if (data.error || data.Status === 'FAILED') {
                         setStatus('failed');
@@ -63,14 +72,22 @@ export default function UploadPage() {
                         setModelUrl(data.ResultUrl);
                         localStorage.removeItem('last_hunyuan_job_id');
                         clearInterval(interval);
+                    } else {
+                        // Update progress if provided by API or simulate it
+                        if (data.Progress) setProgress(data.Progress);
                     }
                 } catch (err) {
                     console.error('Polling error:', err);
                 }
             }, 5000);
         }
-        return () => clearInterval(interval);
-    }, [status, jobId]);
+        return () => {
+            if (interval) {
+                console.log(`POLL_STOP: Clearing monitor for ${jobId}`);
+                clearInterval(interval);
+            }
+        };
+    }, [status, jobId, generationMode]);
 
     const compressImage = (file: File): Promise<File> => {
         return new Promise((resolve, reject) => {
@@ -120,31 +137,49 @@ export default function UploadPage() {
         });
     };
 
-    const handleStartGeneration = async (files?: File[]) => {
-        const filesToUpload = files || pendingFiles;
-        if (filesToUpload.length === 0) return;
+    const [showMultiView, setShowMultiView] = useState(false);
+    const [structuredViews, setStructuredViews] = useState<{ type: string; file: File; base64: string }[] | null>(null);
+
+    const handleStartGeneration = async (files?: File[], views?: { type: string; file: File; base64: string }[]) => {
+        const filesToUpload = files || (views ? views.map(v => v.file) : pendingFiles);
+        if (filesToUpload.length === 0 && !views) return;
 
         setUploadedFilesCount(filesToUpload.length);
         setStatus('uploading');
-        setErrorMessage(null);
+        setJobId(null);
         setShareUrl(null);
         setShowQR(false);
         setPendingFiles([]); // Clear pending state
         setProgress(20);
 
         try {
-            // Compress and process all selected files to base64
-            const processedImages = await Promise.all(
-                filesToUpload.map(async file => {
-                    const compressed = await compressImage(file);
-                    return new Promise<string>((resolve, reject) => {
-                        const reader = new FileReader();
-                        reader.onload = () => resolve(reader.result as string);
-                        reader.onerror = reject;
-                        reader.readAsDataURL(compressed);
-                    });
-                })
-            );
+            let processedPayload: any[] = [];
+
+            if (views) {
+                // Already have base64 from modal
+                processedPayload = views.map(v => ({
+                    ViewType: v.type,
+                    ViewImageBase64: v.base64
+                }));
+            } else {
+                // Compress and process basic file list
+                processedPayload = await Promise.all(
+                    filesToUpload.map(async (file, index) => {
+                        const compressed = await compressImage(file);
+                        const base64 = await new Promise<string>((resolve, reject) => {
+                            const reader = new FileReader();
+                            reader.onload = () => resolve(reader.result as string);
+                            reader.onerror = reject;
+                            reader.readAsDataURL(compressed);
+                        });
+
+                        return {
+                            ViewType: index === 0 ? 'front' : 'back', // Fallback labeling
+                            ViewImageBase64: base64
+                        };
+                    })
+                );
+            }
 
             setProgress(40);
             setStatus('processing');
@@ -152,7 +187,10 @@ export default function UploadPage() {
             const res = await fetch('/api/generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ images: processedImages, mode: generationMode }),
+                body: JSON.stringify({
+                    images: processedPayload,
+                    mode: generationMode
+                }),
             });
 
             const data = await res.json();
@@ -269,41 +307,111 @@ export default function UploadPage() {
                 >
                     <div className="bg-white p-8 md:p-10 rounded-[2.5rem] shadow-2xl shadow-zinc-200/50 relative overflow-hidden group border border-zinc-100">
                         <div className="relative z-10">
-                            <div className="mb-10">
-                                <h4 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400 mb-6 px-1">Engine Configuration</h4>
+                            {/* Tab Switcher */}
+                            <div className="flex items-center gap-8 border-b border-zinc-100 mb-10 px-1">
                                 <button
-                                    onClick={() => setGenerationMode(generationMode === 'pro' ? 'rapid' : 'pro')}
-                                    className="w-full flex items-center justify-between p-5 bg-zinc-50/50 rounded-3xl border border-zinc-100 hover:border-accent/30 hover:bg-white hover:shadow-xl transition-all group btn-hover-effect cursor-pointer"
+                                    onClick={() => {
+                                        setGenerationMode('rapid');
+                                        setPendingFiles([]);
+                                    }}
+                                    className={`pb-4 text-sm font-black uppercase tracking-widest transition-all relative ${generationMode === 'rapid' ? 'text-accent' : 'text-zinc-500 hover:text-zinc-700'
+                                        }`}
                                 >
-                                    <div className="flex items-center gap-4 text-left">
-                                        <div className="w-12 h-12 bg-white rounded-2xl shadow-sm border border-zinc-100 flex items-center justify-center transition-transform group-hover:rotate-6 font-black">
-                                            {generationMode === 'pro' ? 'HQ' : 'FT'}
-                                        </div>
-                                        <div>
-                                            <p className="font-bold text-zinc-900">{generationMode === 'pro' ? 'Hunyuan3D Professional' : 'Rapid Draft'}</p>
-                                            <p className="text-xs text-zinc-500 font-medium">
-                                                {generationMode === 'pro' ? 'Studio Quality • 180s' : 'Speed Optimized • 45s'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className={`w-14 h-7 rounded-full relative transition-colors duration-500 ${generationMode === 'pro' ? 'bg-accent' : 'bg-zinc-200'}`}>
-                                        <motion.div
-                                            animate={{ x: generationMode === 'pro' ? 28 : 4 }}
-                                            className="absolute top-1 w-5 h-5 bg-white rounded-full shadow-md"
-                                        />
-                                    </div>
+                                    Single Image
+                                    {generationMode === 'rapid' && (
+                                        <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-1 bg-accent rounded-full" />
+                                    )}
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setGenerationMode('pro');
+                                        setPendingFiles([]);
+                                    }}
+                                    className={`pb-4 text-sm font-black uppercase tracking-widest transition-all relative ${generationMode === 'pro' ? 'text-accent' : 'text-zinc-500 hover:text-zinc-700'
+                                        }`}
+                                >
+                                    Multiple Images
+                                    {generationMode === 'pro' && (
+                                        <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-1 bg-accent rounded-full" />
+                                    )}
                                 </button>
                             </div>
 
-                            <UploadZone onFilesSelected={(files) => {
-                                if (status === 'idle' || status === 'completed' || status === 'failed') {
-                                    setPendingFiles(Array.from(files));
-                                    setStatus('idle');
-                                    setErrorMessage(null);
-                                }
-                            }} />
+                            {generationMode === 'pro' ? (
+                                <motion.button
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    onClick={() => setShowMultiView(true)}
+                                    className="w-full aspect-[21/9] bg-zinc-900 border-2 border-dashed border-zinc-800 rounded-[2.5rem] flex flex-col items-center justify-center gap-4 hover:border-accent/40 hover:bg-zinc-900/50 transition-all group overflow-hidden relative shadow-2xl"
+                                >
+                                    <div className="absolute inset-0 bg-gradient-to-br from-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    <div className="w-16 h-16 bg-white/5 rounded-3xl flex items-center justify-center text-zinc-500 group-hover:text-accent group-hover:scale-110 transition-all">
+                                        <Plus className="w-8 h-8" />
+                                    </div>
+                                    <div className="text-center relative z-10">
+                                        <h3 className="text-xl font-black text-white uppercase tracking-tighter">Add Multiple Views</h3>
+                                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em] mt-2">
+                                            Min 2 • Max 5 Perspectives
+                                        </p>
+                                    </div>
+                                </motion.button>
+                            ) : (
+                                <UploadZone
+                                    maxFiles={1}
+                                    onFilesSelected={(files) => {
+                                        setPendingFiles(Array.from(files));
+                                        setStatus('idle');
+                                        setErrorMessage(null);
+                                    }}
+                                />
+                            )}
 
-                            {uploadedFilesCount > 1 && (
+                            {/* Action Control Hub */}
+                            <div className="mt-8 space-y-4">
+                                {generationMode === 'pro' && pendingFiles.length > 0 && (
+                                    <button
+                                        onClick={() => setShowMultiView(true)}
+                                        className="w-full py-5 bg-zinc-50 hover:bg-zinc-100 text-zinc-950 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all border border-zinc-200 group"
+                                    >
+                                        <QrCode className="w-5 h-5 text-accent group-hover:rotate-12 transition-transform" />
+                                        Adjust Spatial Perspectives
+                                    </button>
+                                )}
+
+                                <button
+                                    disabled={pendingFiles.length === 0 || status !== 'idle'}
+                                    onClick={() => handleStartGeneration()}
+                                    className={`w-full py-7 rounded-2xl font-black text-xl uppercase tracking-[0.2em] flex items-center justify-center gap-4 transition-all shadow-2xl group/btn ${pendingFiles.length > 0 && status === 'idle'
+                                            ? 'bg-zinc-950 text-white shadow-black/20 hover:scale-[1.01] active:scale-95'
+                                            : 'bg-zinc-100 text-zinc-300 shadow-none cursor-not-allowed'
+                                        }`}
+                                >
+                                    {status === 'idle' ? 'Generate Model' : 'Sculpting Model...'}
+                                    <Sparkles className={`w-7 h-7 ${pendingFiles.length > 0 ? 'text-accent animate-pulse' : ''}`} />
+                                </button>
+
+                                <p className="text-center text-[10px] font-black text-zinc-400 uppercase tracking-[0.4em] pt-4">
+                                    {status === 'idle'
+                                        ? (pendingFiles.length > 0 ? 'Ready for neural materialization' : 'Awaiting asset ingestion')
+                                        : 'Materializing 3D Topology...'}
+                                </p>
+                            </div>
+
+                            {/* Multi-View Integration */}
+                            <MultiViewModal
+                                isOpen={showMultiView}
+                                onClose={() => setShowMultiView(false)}
+                                mainImage={pendingFiles[0] ? {
+                                    file: pendingFiles[0],
+                                    base64: URL.createObjectURL(pendingFiles[0])
+                                } : undefined}
+                                onComplete={(views) => {
+                                    setShowMultiView(false);
+                                    handleStartGeneration(undefined, views);
+                                }}
+                            />
+
+                            {uploadedFilesCount > 1 && status !== 'idle' && (
                                 <motion.div
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
@@ -363,7 +471,7 @@ export default function UploadPage() {
 
                         {status === 'processing' || status === 'uploading' ? (
                             <div className="h-full w-full flex flex-col items-center justify-center p-10 text-center">
-                                <ModelSkeleton />
+                                <ModelSkeleton showSpinner={false} />
                                 <div className="mt-8">
                                     <p className="font-bold text-zinc-400 uppercase tracking-widest text-[10px]">Processing Vertex Data</p>
                                     <div className="w-48 h-1 bg-zinc-200 rounded-full mt-3 overflow-hidden">
@@ -374,30 +482,25 @@ export default function UploadPage() {
                                         />
                                     </div>
                                 </div>
+
+                                {(status === 'processing' || status === 'uploading') && jobId && (
+                                    <div className="mt-6 pt-6 border-t border-zinc-100/10">
+                                        <Link
+                                            href={`/dashboard/viewer/${jobId}?mode=${generationMode}`}
+                                            className="w-full flex items-center justify-center gap-2 py-4 bg-zinc-900/5 hover:bg-zinc-900/10 text-zinc-950 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border border-zinc-200"
+                                        >
+                                            <ArrowUpRight className="w-4 h-4" />
+                                            Open Dedicated Viewer
+                                        </Link>
+                                    </div>
+                                )}
                             </div>
                         ) : (
                             <ModelViewer modelUrl={modelUrl} groupRef={modelGroupRef} />
                         )}
                     </div>
 
-                    {pendingFiles.length > 0 && status === 'idle' && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="mt-6 p-6 bg-accent/5 rounded-[2.5rem] border border-accent/20"
-                        >
-                            <button
-                                onClick={() => handleStartGeneration()}
-                                className="w-full py-6 bg-zinc-950 text-white rounded-[2rem] font-black text-lg uppercase tracking-widest flex items-center justify-center gap-4 hover:bg-black transition-all btn-hover-effect cursor-pointer group shadow-xl shadow-zinc-200"
-                            >
-                                Initiate Generation
-                                <Sparkles className="w-6 h-6 group-hover:rotate-12 transition-transform" />
-                            </button>
-                            <p className="text-center text-[10px] font-black text-accent/60 uppercase tracking-[0.3em] mt-4">
-                                Ready to materialize {pendingFiles.length} assets
-                            </p>
-                        </motion.div>
-                    )}
+
 
                     {/* Status Tracker */}
                     <AnimatePresence mode="wait">
@@ -435,15 +538,37 @@ export default function UploadPage() {
                                             {status === 'completed' && 'Topology Ready'}
                                             {status === 'failed' && 'Process Halt'}
                                         </p>
-                                        <p className={`text-[10px] font-black uppercase tracking-widest mt-1 ${status === 'processing' || status === 'uploading' ? 'text-zinc-500' : 'opacity-60'}`}>
-                                            {status === 'processing' && 'Deployment: Est. 2 mins'}
-                                            {status === 'completed' && 'Production grade mesh verified.'}
-                                            {status === 'failed' && errorMessage}
-                                        </p>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <p className={`text-[10px] font-black uppercase tracking-widest ${status === 'processing' || status === 'uploading' ? 'text-zinc-500' : 'opacity-60'}`}>
+                                                {status === 'uploading' && 'Compressing pixel data...'}
+                                                {status === 'processing' && `Generating Meshes: ${progress}%`}
+                                                {status === 'completed' && 'Production grade mesh verified.'}
+                                                {status === 'failed' && errorMessage}
+                                            </p>
+                                            {(status === 'processing' || status === 'uploading') && (
+                                                <div className="w-1.5 h-1.5 bg-accent rounded-full animate-pulse" />
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
 
-                                {status === 'completed' && (
+                                {status === 'processing' ? (
+                                    <ModelSkeleton showSpinner={false} />
+                                ) : status === 'failed' ? (
+                                    <motion.div
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: 'auto' }}
+                                        className="mt-10 pt-8 border-t border-zinc-50 grid grid-cols-2 gap-4"
+                                    >
+                                        <button
+                                            onClick={() => setStatus('idle')}
+                                            className="col-span-2 flex items-center justify-center gap-3 py-5 bg-red-500 text-white rounded-2xl text-[10px] font-black tracking-widest uppercase hover:bg-red-600 transition-all btn-hover-effect cursor-pointer"
+                                        >
+                                            <RefreshCcw className="w-4 h-4" />
+                                            Try Again
+                                        </button>
+                                    </motion.div>
+                                ) : status === 'completed' && (
                                     <motion.div
                                         initial={{ opacity: 0, height: 0 }}
                                         animate={{ opacity: 1, height: 'auto' }}
@@ -482,46 +607,48 @@ export default function UploadPage() {
 
             {/* QR Code Modal */}
             <AnimatePresence>
-                {showQR && (
-                    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setShowQR(false)}
-                            className="absolute inset-0 bg-zinc-950/60 backdrop-blur-xl"
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: 40 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: 40 }}
-                            className="relative bg-white p-10 md:p-12 rounded-[3.5rem] shadow-2xl max-w-md w-full text-center border border-zinc-100"
-                        >
-                            <button
+                {
+                    showQR && (
+                        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
                                 onClick={() => setShowQR(false)}
-                                className="absolute top-6 right-6 p-2 bg-zinc-50 hover:bg-zinc-100 rounded-full transition-all cursor-pointer"
+                                className="absolute inset-0 bg-zinc-950/60 backdrop-blur-xl"
+                            />
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.9, y: 40 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.9, y: 40 }}
+                                className="relative bg-white p-10 md:p-12 rounded-[3.5rem] shadow-2xl max-w-md w-full text-center border border-zinc-100"
                             >
-                                <CloseX className="w-5 h-5 text-zinc-400" />
-                            </button>
+                                <button
+                                    onClick={() => setShowQR(false)}
+                                    className="absolute top-6 right-6 p-2 bg-zinc-50 hover:bg-zinc-100 rounded-full transition-all cursor-pointer"
+                                >
+                                    <CloseX className="w-5 h-5 text-zinc-400" />
+                                </button>
 
-                            <div className="mb-10">
-                                <div className="w-20 h-20 bg-accent text-white shadow-2xl shadow-accent/30 rounded-[2rem] flex items-center justify-center mx-auto mb-6 transform rotate-3">
-                                    <Smartphone className="w-10 h-10" />
+                                <div className="mb-10">
+                                    <div className="w-20 h-20 bg-accent text-white shadow-2xl shadow-accent/30 rounded-[2rem] flex items-center justify-center mx-auto mb-6 transform rotate-3">
+                                        <Smartphone className="w-10 h-10" />
+                                    </div>
+                                    <h3 className="text-3xl font-black tracking-tighter text-zinc-950 uppercase">Step into AR</h3>
+                                    <p className="text-zinc-500 font-medium mt-2">Materialize this asset in your physical space.</p>
                                 </div>
-                                <h3 className="text-3xl font-black tracking-tighter text-zinc-950 uppercase">Step into AR</h3>
-                                <p className="text-zinc-500 font-medium mt-2">Materialize this asset in your physical space.</p>
-                            </div>
 
-                            <div className="bg-zinc-50 p-6 rounded-[2.5rem] border border-zinc-100 mb-10 flex justify-center">
-                                <QRCodeSVG value={shareUrl || `${window.location.origin}/ar/${jobId}`} size={240} includeMargin />
-                            </div>
+                                <div className="bg-zinc-50 p-6 rounded-[2.5rem] border border-zinc-100 mb-10 flex justify-center">
+                                    <QRCodeSVG value={shareUrl || `${window.location.origin}/ar/${jobId}`} size={240} includeMargin />
+                                </div>
 
-                            <p className="text-[10px] text-zinc-400 font-black uppercase tracking-[0.2em] leading-relaxed">
-                                Universal Platform Compatibility <br /> (Apple QuickLook & SceneViewer)
-                            </p>
-                        </motion.div>
-                    </div>
-                )}
+                                <p className="text-[10px] text-zinc-400 font-black uppercase tracking-[0.2em] leading-relaxed">
+                                    Universal Platform Compatibility <br /> (Apple QuickLook & SceneViewer)
+                                </p>
+                            </motion.div>
+                        </div>
+                    )
+                }
             </AnimatePresence>
         </div>
     );

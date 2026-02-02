@@ -10,7 +10,6 @@ export default function SettingsPage() {
     const tabs = [
         { id: 'profile', label: 'Profile', icon: User },
         { id: 'engine', label: 'Engine V2', icon: Cpu },
-        { id: 'security', label: 'Security', icon: Shield },
         { id: 'notifications', label: 'Alerts', icon: Bell },
     ];
 
@@ -24,9 +23,9 @@ export default function SettingsPage() {
                     <p className="text-zinc-500 font-medium text-lg">Configure your generative workflow and account preferences.</p>
                 </div>
 
-                <div className="grid lg:grid-cols-4 gap-12 items-start">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-10 md:gap-12 items-start">
                     {/* Sidebar Tabs */}
-                    <div className="lg:col-span-1 space-y-2">
+                    <div className="md:col-span-1 space-y-2">
                         {tabs.map((tab) => {
                             const Icon = tab.icon;
                             const isActive = activeTab === tab.id;
@@ -35,8 +34,8 @@ export default function SettingsPage() {
                                     key={tab.id}
                                     onClick={() => setActiveTab(tab.id)}
                                     className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition-all font-black text-[10px] uppercase tracking-widest ${isActive
-                                            ? 'bg-zinc-950 text-white shadow-xl shadow-zinc-200'
-                                            : 'text-zinc-400 hover:bg-zinc-50 hover:text-zinc-950'
+                                        ? 'bg-zinc-950 text-white shadow-xl shadow-zinc-200'
+                                        : 'text-zinc-400 hover:bg-zinc-50 hover:text-zinc-950'
                                         }`}
                                 >
                                     <Icon className={`w-4 h-4 ${isActive ? 'text-accent' : ''}`} />
@@ -47,16 +46,15 @@ export default function SettingsPage() {
                     </div>
 
                     {/* Main Settings Content */}
-                    <div className="lg:col-span-3">
+                    <div className="md:col-span-3">
                         <motion.div
                             key={activeTab}
                             initial={{ opacity: 0, x: 20 }}
                             animate={{ opacity: 1, x: 0 }}
-                            className="bg-zinc-50/50 border border-zinc-100 p-10 md:p-12 rounded-[3.5rem] shadow-sm space-y-10"
+                            className="bg-zinc-50/50 border border-zinc-100 p-6 sm:p-8 md:p-12 rounded-[2.5rem] md:rounded-[3.5rem] shadow-sm space-y-10"
                         >
                             {activeTab === 'profile' && <ProfileSettings />}
                             {activeTab === 'engine' && <EngineSettings />}
-                            {activeTab === 'security' && <SecuritySettings />}
                             {activeTab === 'notifications' && <div className="py-20 text-center text-zinc-400 font-black uppercase tracking-[0.2em] text-[10px]">No notification history found.</div>}
                         </motion.div>
                     </div>
@@ -137,40 +135,6 @@ function EngineSettings() {
     );
 }
 
-function SecuritySettings() {
-    return (
-        <div className="space-y-10">
-            <div className="flex items-center justify-between border-b border-zinc-100 pb-6">
-                <h3 className="text-2xl font-black text-zinc-950 uppercase tracking-tight">Security & Keys</h3>
-            </div>
-
-            <div className="bg-white p-8 rounded-[2rem] border border-zinc-100 shadow-sm space-y-6">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-zinc-50 rounded-xl flex items-center justify-center">
-                            <Key className="w-6 h-6 text-zinc-400" />
-                        </div>
-                        <div>
-                            <p className="text-sm font-black uppercase tracking-tight text-zinc-950">Primary API Access Key</p>
-                            <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-1">Last rotated: 2 days ago</p>
-                        </div>
-                    </div>
-                    <button className="px-6 py-4 bg-zinc-50 hover:bg-zinc-100 text-zinc-950 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border border-zinc-100">
-                        Rotate Token
-                    </button>
-                </div>
-
-                <div className="p-4 bg-red-50 text-red-700 rounded-2xl border border-red-100 flex items-start gap-4">
-                    <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" />
-                    <div>
-                        <p className="text-xs font-black uppercase tracking-tight">Critical Warning</p>
-                        <p className="text-[10px] font-medium leading-relaxed mt-1 opacity-80">Never reveal your private keys. Gen3DAI support will never ask for your credentials terminal-side.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-}
 
 function SettingToggle({ icon, title, desc, enabled }: { icon: React.ReactNode, title: string, desc: string, enabled: boolean }) {
     const [isOn, setIsOn] = useState(enabled);

@@ -45,11 +45,12 @@ export default function UploadZone({ onFilesSelected, maxFiles = 5 }: UploadZone
                     <Upload className={`w-6 h-6 ${isDragActive ? 'text-accent' : 'text-zinc-400'}`} />
                 </div>
 
-                <h3 className="text-lg font-bold mb-1">
-                    {isDragActive ? 'Drop your images here' : 'Select images to generate 3D'}
+                <h3 className="text-xl font-black uppercase tracking-tight mb-2">
+                    {isDragActive ? 'Drop Assets Now' : 'Input Multiple Perspectives'}
                 </h3>
-                <p className="text-zinc-500 text-center max-w-sm text-sm">
-                    Drag & drop JPG or PNG files here. Support for single or multi-view snapshots.
+                <p className="text-zinc-500 text-center max-w-sm text-xs font-bold uppercase tracking-widest leading-relaxed">
+                    Select <span className="text-zinc-950 underline underline-offset-4 decoration-accent">multiple images</span> for high-fidelity 3D. <br />
+                    Hold <kbd className="bg-zinc-100 px-1.5 py-0.5 rounded border border-zinc-200">Ctrl</kbd> to select several views.
                 </p>
 
                 <motion.div

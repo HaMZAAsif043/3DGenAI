@@ -13,23 +13,29 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'No images provided' }, { status: 400 });
         }
 
-        let input: string | any[];
+        let input: any;
 
         if (images.length === 1) {
-            // Single view: pass base64 directly
-            input = images[0];
+            // Single view or simple array: handle accordingly
+            const img = images[0];
+            if (typeof img === 'string') {
+                input = img;
+            } else {
+                // Already a structured object
+                input = [img];
+            }
         } else {
-            // Multi-view: format according to Hunyuan3D requirements
-            // Defaulting views: [front (implied), back, left, right, top, bottom]
-            const viewOrder: any[] = ['back', 'left', 'right', 'top', 'bottom'];
-            input = images.slice(1).map((img: string, index: number) => ({
-                ViewType: viewOrder[index] || 'back',
-                ViewImageBase64: img.split(',')[1] || img
-            }));
-
-            // Note: The first image is usually the main/front image in Pro API 
-            // but for MultiViewImages parameter, it expects specific views.
-            // If the user provides 2 images, it's Front + Back.
+            // Multi-view: check if input is already structured objects
+            if (typeof images[0] === 'object' && images[0].ViewType) {
+                input = images;
+            } else {
+                // Legacy fallback for raw string arrays
+                const viewOrder: any[] = ['front', 'back', 'left', 'right', 'top', 'bottom'];
+                input = images.map((img: string, index: number) => ({
+                    ViewType: viewOrder[index] || 'back',
+                    ViewImageBase64: img.split(',')[1] || img
+                }));
+            }
         }
 
         const isPro = mode === 'pro';

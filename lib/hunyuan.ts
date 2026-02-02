@@ -27,14 +27,40 @@ export async function submitImageTo3D(
     const action = isPro ? "SubmitHunyuanTo3DProJob" : "SubmitHunyuanTo3DRapidJob";
 
     let payload: any = {};
+
     if (Array.isArray(input)) {
-        payload.ImageBase64 = input[0].ViewImageBase64?.split(',')[1] || input[0].ViewImageBase64;
+        // Multi-view mode: The first image is the main/front image
+        const mainImage = input[0];
+        if (mainImage.ViewImageBase64) {
+            payload.ImageBase64 = mainImage.ViewImageBase64.split(',')[1] || mainImage.ViewImageBase64;
+        } else if (mainImage.ViewImageUrl) {
+            payload.ImageUrl = mainImage.ViewImageUrl;
+        }
+
+        // Additional views go into MultiViewImages array
+        // Note: The Pro API documentation specifies MultiViewImages as a parameter
+        if (input.length > 1) {
+            payload.MultiViewImages = input.slice(1).map(view => ({
+                ViewType: view.ViewType,
+                ViewImageBase64: view.ViewImageBase64?.split(',')[1] || view.ViewImageBase64,
+                ViewImageUrl: view.ViewImageUrl
+            }));
+        }
     } else if (input.startsWith('data:image')) {
         payload.ImageBase64 = input.split(',')[1] || input;
     } else {
         payload.ImageUrl = input;
     }
 
+    // Default to Model 3.0 or 3.1 based on isPro or specific requirements
+    // For Pro, we can optionally specify Model: "3.1"
+    if (isPro) {
+        payload.Model = "3.1";
+        payload.EnablePBR = true; // High fidelity
+        payload.FaceCount = 80000;
+        payload.GenerateType = "LowPoly";
+        payload.PolygonType = "triangle";
+    }
 
     const headers = getTencentAuthHeaders({
         secretId: SECRET_ID,

@@ -163,10 +163,10 @@ export default function LandingPage() {
 
               <div className="p-10 bg-white border border-zinc-100 rounded-[3rem] text-left hover:border-accent/20 hover:shadow-2xl hover:shadow-zinc-100 transition-all group">
                 <Boxes className="w-12 h-12 text-accent mb-6 group-hover:scale-110 transition-transform" />
-                <h4 className="text-2xl font-black text-zinc-900 mb-4 uppercase tracking-tight">Batch Pipelines</h4>
-                <p className="text-zinc-500 text-sm leading-relaxed mb-8 font-medium">Process entire product catalogs with our high-throughput batch API. Integrated metadata tagging for asset management.</p>
+                <h4 className="text-2xl font-black text-zinc-900 mb-4 uppercase tracking-tight">Integrated Pipelines</h4>
+                <p className="text-zinc-500 text-sm leading-relaxed mb-8 font-medium">Process entire product catalogs with our high-throughput web pipeline. Integrated metadata tagging for asset management.</p>
                 <div className="flex items-center gap-2 text-accent font-black text-[10px] uppercase tracking-widest">
-                  API Guide <ChevronRight className="w-4 h-4" />
+                  Service Guide <ChevronRight className="w-4 h-4" />
                 </div>
               </div>
             </div>

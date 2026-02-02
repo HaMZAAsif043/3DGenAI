@@ -1,6 +1,18 @@
 import type { Metadata } from "next";
 import "./globals.css";
-// import { AuthProvider } from "@/context/AuthContext";
+import { Inter, Outfit } from 'next/font/google';
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+});
+
+const outfit = Outfit({
+  subsets: ['latin'],
+  variable: '--font-outfit',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: "Gen3DAI | Professional Image to 3D Platform",
@@ -16,8 +28,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="antialiased" suppressHydrationWarning>
-      <body className="min-h-screen bg-white text-zinc-900 selection:bg-accent/10">
+    <html lang="en" className={`${inter.variable} ${outfit.variable} antialiased`} suppressHydrationWarning>
+      <body className="font-sans min-h-screen bg-white text-zinc-900 selection:bg-accent/10">
         {children}
       </body>
     </html>

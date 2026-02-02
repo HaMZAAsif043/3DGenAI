@@ -22,7 +22,7 @@ export default function Footer() {
                             <li><a href="/dashboard/upload" className="hover:text-white transition-colors">Engine v2.0</a></li>
                             <li><a href="/#showcase" className="hover:text-white transition-colors">Model Gallery</a></li>
                             <li><a href="#" className="hover:text-white transition-colors">Documentation</a></li>
-                            <li><a href="#" className="hover:text-white transition-colors">API Status</a></li>
+                            <li><a href="#" className="hover:text-white transition-colors">System Status</a></li>
                         </ul>
                     </div>
 
