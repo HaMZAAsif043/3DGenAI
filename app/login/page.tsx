@@ -19,9 +19,21 @@ export default function LoginPage() {
         setError(null);
 
         try {
+            const res = await fetch("api/auth/login",{
+                method:"POST",
+                headers:{
+                    "content-type":"application/json",
+
+                },
+                body:JSON.stringify({
+                  password,
+                  email  
+                })
+            })
+            console.log(res)
             // Simulation of auth - to be connected to Firebase/Backend
             await new Promise(resolve => setTimeout(resolve, 1500));
-            router.push('/dashboard');
+            // router.push('/dashboard');
         } catch (err: any) {
             setError(err.message || 'Authentication sequence failed.');
         } finally {

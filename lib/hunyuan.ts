@@ -9,9 +9,10 @@ const HOST = "hunyuan.intl.tencentcloudapi.com";
 
 export interface HunyuanJobResponse {
     JobId: string;
-    Status: 'IDLE' | 'RUNNING' | 'SUCCESS' | 'FAILED' | 'WAIT' | 'RUN' | 'DONE' | string;
+    Status: 'IDLE' | 'RUNNING' | 'SUCCESS' | 'FAILED' | 'WAIT' | string;
     ResultUrl?: string;
     ErrorMsg?: string;
+    Progress?: number;
 }
 
 export interface MultiViewImage {
@@ -124,22 +125,35 @@ export async function queryJobStatus(jobId: string, isPro: boolean = false): Pro
 
         const res = data.Response;
 
+        // Deep robustness: check for nested 'result' array common in some Hunyuan API variants
+        const root = (res.result && Array.isArray(res.result) && res.result[0]) ? res.result[0] : res;
+
         // Map Tencent statuses to frontend statuses
-        let normalizedStatus = res.Status;
-        if (res.Status === 'DONE') normalizedStatus = 'SUCCESS';
-        if (res.Status === 'FAIL') normalizedStatus = 'FAILED';
-        if (res.Status === 'RUN') normalizedStatus = 'RUNNING';
-        if (res.Status === 'WAIT') normalizedStatus = 'WAIT';
+        let normalizedStatus = (root.Status || root.status || '').toUpperCase();
+
+        if (normalizedStatus === 'DONE' || normalizedStatus === 'SUCCESS' || normalizedStatus === 'COMPLETED') {
+            normalizedStatus = 'SUCCESS';
+        } else if (normalizedStatus === 'FAIL' || normalizedStatus === 'FAILED' || normalizedStatus === 'ERROR') {
+            normalizedStatus = 'FAILED';
+        } else if (normalizedStatus === 'RUN' || normalizedStatus === 'RUNNING' || normalizedStatus === 'PROCESSING') {
+            normalizedStatus = 'RUNNING';
+        } else if (normalizedStatus === 'WAIT' || normalizedStatus === 'WAITING' || normalizedStatus === 'PENDING') {
+            normalizedStatus = 'WAIT';
+        } else {
+            normalizedStatus = 'RUNNING'; // Default to running for robustness
+        }
 
         // Find the best 3D model URL (prefer non-GIF)
         let resultUrl = undefined;
-        if (res.ResultFile3Ds && res.ResultFile3Ds.length > 0) {
+        // Check root and res for ResultFile3Ds
+        const modelSource = root.ResultFile3Ds || res.ResultFile3Ds;
+        if (modelSource && modelSource.length > 0) {
             // Prioritize GLB, then OBJ/ZIP
             const modelFile =
-                res.ResultFile3Ds.find((f: any) => f.Type === 'GLB') ||
-                res.ResultFile3Ds.find((f: any) => f.Type === 'OBJ' || f.Type === 'ZIP') ||
-                res.ResultFile3Ds.find((f: any) => f.Type !== 'GIF') ||
-                res.ResultFile3Ds[0];
+                modelSource.find((f: any) => f.Type === 'GLB') ||
+                modelSource.find((f: any) => f.Type === 'OBJ' || f.Type === 'ZIP') ||
+                modelSource.find((f: any) => f.Type !== 'GIF') ||
+                modelSource[0];
 
             // Wrap in our CORS proxy
             if (modelFile.Url) {
@@ -151,7 +165,8 @@ export async function queryJobStatus(jobId: string, isPro: boolean = false): Pro
             JobId: jobId,
             Status: normalizedStatus,
             ResultUrl: resultUrl,
-            ErrorMsg: res.ErrorMessage || res.ErrorCode
+            ErrorMsg: root.ErrorMessage || root.ErrorCode || res.ErrorMessage || res.ErrorCode,
+            Progress: root.Progress !== undefined ? root.Progress : (root.progress !== undefined ? root.progress : 0)
         };
     } catch (err) {
         console.error("Hunyuan3D direct API status query error:", err);

@@ -67,14 +67,20 @@ export default function UploadPage() {
                         setErrorMessage(data.error || data.ErrorMsg || 'Generation failed');
                         localStorage.removeItem('last_hunyuan_job_id');
                         clearInterval(interval);
-                    } else if (data.Status === 'SUCCESS') {
+                    } else if (data.Status === 'SUCCESS' && data.ResultUrl) {
+                        setProgress(100);
                         setStatus('completed');
                         setModelUrl(data.ResultUrl);
                         localStorage.removeItem('last_hunyuan_job_id');
                         clearInterval(interval);
                     } else {
-                        // Update progress if provided by API or simulate it
-                        if (data.Progress) setProgress(data.Progress);
+                        // Update progress if provided by API (explicit check for 0)
+                        if (data.Progress !== undefined) {
+                            setProgress(data.Progress);
+                        } else if (status === 'processing') {
+                            // Slowly tick up if no progress provided to show activity
+                            setProgress(prev => Math.min(prev + 0.5, 98));
+                        }
                     }
                 } catch (err) {
                     console.error('Polling error:', err);
@@ -382,8 +388,8 @@ export default function UploadPage() {
                                     disabled={pendingFiles.length === 0 || status !== 'idle'}
                                     onClick={() => handleStartGeneration()}
                                     className={`w-full py-7 rounded-2xl font-black text-xl uppercase tracking-[0.2em] flex items-center justify-center gap-4 transition-all shadow-2xl group/btn ${pendingFiles.length > 0 && status === 'idle'
-                                            ? 'bg-zinc-950 text-white shadow-black/20 hover:scale-[1.01] active:scale-95'
-                                            : 'bg-zinc-100 text-zinc-300 shadow-none cursor-not-allowed'
+                                        ? 'bg-zinc-950 text-white shadow-black/20 hover:scale-[1.01] active:scale-95'
+                                        : 'bg-zinc-100 text-zinc-300 shadow-none cursor-not-allowed'
                                         }`}
                                 >
                                     {status === 'idle' ? 'Generate Model' : 'Sculpting Model...'}

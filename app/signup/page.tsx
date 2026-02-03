@@ -20,9 +20,21 @@ export default function SignupPage() {
         setError(null);
 
         try {
-            // Simulation of registration
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            router.push('/dashboard');
+            const res = await fetch("api/auth/signup",{
+method:"POST",
+                headers:{
+    "content-type":"application/json"
+},
+body:JSON.stringify({
+username:name,
+password,
+email
+})
+            }
+        )
+        console.log(await res.json())
+            // await new Promise(resolve => setTimeout(resolve, 2000));
+            // router.push('/dashboard');
         } catch (err: any) {
             setError(err.message || 'Registration sequence interrupted.');
         } finally {
