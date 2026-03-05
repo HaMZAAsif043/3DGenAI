@@ -1,37 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 3DGenAI
 
-## Getting Started
+An AI-powered 3D model management platform with real-time AR preview, built with **Next.js**, **Three.js**, and **TypeScript**. Supports GLB/USDZ format conversion, AR-ready model downloads, and per-account model storage.
 
-First, run the development server:
+## ✨ Features
+
+- **GLB → USDZ Conversion** — Convert 3D models to Apple AR-compatible USDZ format directly in the browser
+- **AR Model Preview** — View and interact with models in Augmented Reality on supported iOS devices
+- **USDZ Download** — One-click download of AR-ready `.usdz` files for real-world deployment
+- **Per-Account Model Storage** — Each user account has isolated model storage with persistent access
+- **3D Viewport** — Interactive Three.js viewer with orbit controls, lighting, and real-time rendering
+- **Next.js App Router** — Built on the modern Next.js 14 App Router architecture
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Next.js 14, TypeScript, Tailwind CSS |
+| 3D Rendering | Three.js |
+| AR Format | USDZ (Apple AR Quick Look) |
+| 3D Format | GLB / GLTF |
+| Auth & Storage | Per-account model isolation |
+
+## 🚀 Getting Started
 
 ```bash
+# Clone the repo
+git clone https://github.com/HaMZAAsif043/3DGenAI.git
+cd 3DGenAI
+
+# Install dependencies
+npm install
+
+# Run development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to see the app.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📁 Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+3DGenAI/
+├── app/                  # Next.js App Router pages
+├── components/           # Reusable UI components
+│   ├── viewer/           # Three.js 3D viewer
+│   └── converter/        # GLB ↔ USDZ conversion logic
+├── lib/                  # Utilities and helpers
+├── public/               # Static assets
+└── types/                # TypeScript type definitions
+```
 
-## Learn More
+## 📱 AR Workflow
 
-To learn more about Next.js, take a look at the following resources:
+1. Upload or generate a 3D model (GLB format)
+2. Platform converts it to USDZ automatically
+3. Download the `.usdz` file
+4. Open on iOS — AR Quick Look launches instantly
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🔮 Roadmap
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- [ ] AI-based 3D model generation from text prompts
+- [ ] Android AR support (via WebXR / glTF)
+- [ ] Cloud storage integration
+- [ ] Model sharing and collaboration
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# 3DGenAI
+Built with ❤️ at [BlenSpark](https://blenspark.com)
